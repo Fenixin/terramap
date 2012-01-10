@@ -54,8 +54,15 @@ class World:
         print 'saving image...'
         image.save(imgpath)
         print 'done.'
-            
-            
+    
+    def get_tile(self, x, y):
+        w = self.header['width']
+        h = self.header['height']
+        if x > w or y > h or x < 0 or y < 0:
+            return None
+        else:
+            return self.tiles[x * h + y]
+
     def _read_header(self):
         header = {}
         for key, type in [
