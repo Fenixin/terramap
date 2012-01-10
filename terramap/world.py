@@ -37,24 +37,50 @@ class World:
             
     def draw_map(self, imgpath):
         print 'generating image...'
-        image = Image.new('RGB', (self.header['width'], self.header['height']))
+        image = Image.new('RGBA', (self.header['width'], self.header['height']), (0, 0, 0, 255))
         img = image.load()
         imagedata = []
         for y in range(self.header['height']):
             self._display_progress(y + 1, self.header['height'])
             for x in range(self.header['width']):
                 tile = self.tiles[x * self.header['height'] + y]
+                # I think the correct order is:
+                #  1- draw the wall colour (TODO)
+                #       note: the wall depends on the height and the wall tile
+                #  2- composite the tile color
+                #  3- composite the liquid color
                 if 'type' in tile:
                     type = self.tiletypes[tile['type']]
-                    colour = type['r'], type['g'], type['b']
+                    colour = type['r'], type['g'], type['b'], type['a']
                 else:
-                    colour = (0, 0, 0)
+                    colour = (0, 0, 0, 255)
+                if 'liquidlevel' in tile:
+                    alpha = tile['liquidlevel'] // 2 # in this way is always traslucent
+                    # at the moment the background is black, water and lava colours will look
+                    # wrong if the background is changed
+                    liquid_colour = (255, 25, 0, alpha) if tile['lava'] == True else (53, 110, 227, alpha)
+                    colour = self.alpha_over_pixel(liquid_colour, colour)
+                
                 img[x, y] = colour
                 
         print 'saving image...'
         image.save(imgpath)
         print 'done.'
     
+    def alpha_over_pixel(self, c1, c2):
+        """
+        Expects two RGBA colours. It's an alpha compositing.
+        The operation is c1 over c2.
+        """
+        colour = [0, 0, 0, 0]
+        a1 = c1[3] / 255.
+        a2 = c2[3] / 255.
+        for i in range(3):
+            colour[i] = int(c1[i]*a1 + c2[i] * a2*(1 - a1))
+
+        colour[3] = int(255 * (a1 + a2*(1 - a1)))
+        return tuple(colour)
+        
     def get_tile(self, x, y):
         w = self.header['width']
         h = self.header['height']
